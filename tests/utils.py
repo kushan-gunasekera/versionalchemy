@@ -129,9 +129,19 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         self.session = self.Session()
 
     def tearDown(self):
+        self.dropAll()
+        self.session.close()
+
+    def dropAll(self):
         delete_cmd = 'drop table {}'
         self.engine.execute(delete_cmd.format(UserTable.__tablename__))
         self.engine.execute(delete_cmd.format(ArchiveTable.__tablename__))
         self.engine.execute(delete_cmd.format(MultiColumnUserTable.__tablename__))
         self.engine.execute(delete_cmd.format(MultiColumnArchiveTable.__tablename__))
-        self.session.close()
+
+    def addTestColumn(self):
+        self.dropAll()
+        setattr(UserTable, 'added_test_column', sa.Column)
+        Base.metadata.create_all(self.engine)
+        UserTable.register(ArchiveTable, self.engine)
+        MultiColumnUserTable.register(MultiColumnArchiveTable, self.engine)

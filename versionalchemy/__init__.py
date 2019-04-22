@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from versionalchemy import utils
 from versionalchemy.exceptions import LogTableCreationError
-from models import VAModelMixin
+#from models import VAModelMixin
+from versionalchemy.models import VAModelMixin
 
 _initialized = False
 

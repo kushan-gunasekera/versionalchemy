@@ -181,7 +181,7 @@ class _JSONEncoded(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
-        elif isinstance(value, basestring):
+        elif isinstance(value, str):
             value = json.loads(value)
 
         if self.json_type is not None and not isinstance(value, self.json_type):

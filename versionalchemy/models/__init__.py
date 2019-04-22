@@ -1,11 +1,11 @@
 from datetime import datetime
-
+import json
 from sqlalchemy import Column, Integer, Boolean, DateTime, func
 import sqlalchemy as sa
-
+from  versionalchemy.api import data
 from versionalchemy import utils
 from versionalchemy.exceptions import LogTableCreationError
-
+import arrow
 
 class VALogMixin(object):
     """
@@ -189,3 +189,37 @@ class VAModelMixin(object):
             where(self.ArchiveTable.va_id == self.va_id)
         ).first()
         return result[0]
+
+    def va_list(cls, session, id):
+        if id is not None:
+            return utils.result_to_dict(session.execute(
+                sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id])
+                .where(cls.ArchiveTable.id == id)
+            ))
+
+    @classmethod
+    def va_get(cls, session, va_id):
+        if va_id is not None:
+            result = utils.result_to_dict(session.execute(
+                    sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
+                    .where(cls.ArchiveTable.va_id == va_id)
+                    )
+                )[0]
+            historicObject = result['va_data']
+            historicObject['va_id'] = result['va_id']
+            return historicObject
+
+    @classmethod
+    def va_restore(cls, session, va_id):
+        vals = cls.va_get(session, va_id)
+        row = session.query(cls).get(vals['id'])
+        print("NEW VALUES", vals)
+        ''''''
+        for a in cls.__table__.columns:
+            col_name = a.key
+            log_value = vals.get(col_name, None)
+            if log_value is not None and getattr(cls, col_name).type.python_type is datetime:
+                vals[col_name] = arrow.get(vals[col_name]).datetime
+            setattr(row, col_name, log_value)
+        session.commit()
+        session.flush()
