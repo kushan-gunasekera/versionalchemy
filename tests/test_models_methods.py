@@ -1,10 +1,13 @@
+import datetime
+
 from tests.models import (
+    ArchiveTable,
     UserTable,
 )
 from tests.utils import (
     SQLiteTestBase,
 )
-
+from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError
 
 class TestRestore(SQLiteTestBase):
     def test_restore_row_with_new_nullable_column(self):
@@ -41,7 +44,7 @@ class TestRestore(SQLiteTestBase):
         self.addTestNoDefaultNoNullColumn()
         p = self.session.query(UserTable).get(p.id)
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(RestoreError):
             p.va_restore(self.session, first_version)
 
 
@@ -71,3 +74,33 @@ class TestList(SQLiteTestBase):
             {'va_id': first_version, 'user_id': None},
             {'va_id': first_version + 1, 'user_id': None}
         ])
+
+    def test_va_list_by_pk_fail(self):
+        p = UserTable(**self.p1)
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        first_version = p.va_id
+        p.col1 = 'test'
+        self.session.commit()
+        with self.assertRaises (LogIdentifyError):
+            res = UserTable.va_list_by_pk(self.session)
+
+class TestGet(SQLiteTestBase):
+    def test_va_get(self):
+        p = UserTable(**self.p1)
+        self._add_and_test_version(p, 0)
+
+        pa = self.session.query(ArchiveTable).get(p.va_id)
+        print("PA", pa.va_id)
+
+        to_insert = {
+            'va_version': 0,
+            'va_deleted': False,
+            'user_id': 'foo',
+            'va_updated_at': datetime.now(),
+            'va_data': {},
+            'product_id': p.product_id,
+        }
+        self.session.add(ArchiveTable(**to_insert))
+
+
