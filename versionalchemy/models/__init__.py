@@ -263,3 +263,14 @@ class VAModelMixin(object):
 
         session.flush()
         session.commit()
+
+    def va_diff(cls, session, va_id):
+        if va_id < 1:
+            print("This is the only version")
+            return {}
+        this_row = cls.va_get(session, va_id)
+        prev_row = cls.va_get(session, va_id-1)
+        print(type(prev_row))
+        print(this_row)
+        changes = utils.compare_dicts(prev_row, this_row)
+        print(changes)
