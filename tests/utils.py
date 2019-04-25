@@ -145,11 +145,6 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         self.engine.execute('alter table {} add column `test_column1` VARCHAR(50) NULL;'.format(
             UserTable.__tablename__))
 
-    def addTestDefaultColumn(self):
-        setattr(UserTable, 'test_column2', sa.Column(String(50), nullable=False, default=lambda: '123'))
-        self.engine.execute('alter table {} add column `test_column2` VARCHAR(50) NOT NULL DEFAULT "";'.format(
-            UserTable.__tablename__))
-
     def addTestNoDefaultNoNullColumn(self):
         setattr(UserTable, 'test_column3', sa.Column(String(50), nullable=False))
         self.engine.execute('alter table {} add column `test_column3` VARCHAR(50) NOT NULL DEFAULT "";'.format(
