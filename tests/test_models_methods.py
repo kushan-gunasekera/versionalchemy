@@ -54,6 +54,10 @@ class TestList(SQLiteTestBase):
         p.col1 = 'test'
         self.session.commit()
         res = UserTable.va_list_by_pk(self.session, product_id=p.product_id)
+        self.assertEqual(res, [
+            {'va_id': first_version, 'user_id': None},
+            {'va_id': first_version + 1, 'user_id': None}
+        ])
 
     def test_va_list(self):
         p = UserTable(**self.p1)
@@ -63,3 +67,7 @@ class TestList(SQLiteTestBase):
         p.col1 = 'test'
         self.session.commit()
         res = p.va_list(self.session)
+        self.assertEqual(res, [
+            {'va_id': first_version, 'user_id': None},
+            {'va_id': first_version + 1, 'user_id': None}
+        ])
