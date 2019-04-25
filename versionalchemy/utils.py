@@ -9,6 +9,24 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine.reflection import Inspector
 
+def compare_dicts(old_d, new_d):
+
+    changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
+    changes = {}
+    for pair in list(changed_values_set):
+        if pair[0] not in changes:
+            changes[pair[0]] = {}
+        if pair[0] in new_d:
+            if pair[0] in old_d:
+                prev_or_this = 'this' if pair in new_d.items() else "prev"
+                changes[pair[0]][prev_or_this] = pair[1]
+            else:
+                changes[pair[0]]['prev'] = None
+                changes[pair[0]]['this'] = pair[1]
+        elif pair[0] in old_d:
+            changes[pair[0]]['prev'] = pair[1]
+            changes[pair[0]]['this'] = None
+    return changes
 
 def result_to_dict(res):
     """
