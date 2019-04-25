@@ -1,12 +1,14 @@
 import logging
 from datetime import datetime
 import json
+from operator import and_
+
 from sqlalchemy import Column, Integer, Boolean, DateTime, func
 import sqlalchemy as sa
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from versionalchemy import utils
-from versionalchemy.exceptions import LogTableCreationError, RestoreError
+from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError
 import arrow
 
 log = logging.getLogger(__name__)
@@ -195,12 +197,37 @@ class VAModelMixin(object):
         ).first()
         return result[0]
 
-    def va_list(cls, session, id):
-        if id is not None:
-            return utils.result_to_dict(session.execute(
-                sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id])
-                .where(cls.ArchiveTable.id == id)
-            ))
+    @classmethod
+    def create_log_select_expression(cls, attributes):
+        expressions = ()
+        for col_name in cls.ArchiveTable._version_col_names:
+            if col_name not in attributes:
+                raise LogIdentifyError("Can't determine item id - no parameters passed, "
+                                       "please pass '{}' argument".format(col_name))
+
+            expressions += (getattr(cls.ArchiveTable, col_name) == attributes[col_name],)
+
+        if len(expressions) > 1:
+            return and_(expressions)
+
+        return expressions[0]
+
+    @classmethod
+    def va_list_by_pk(cls, session, **kwargs):
+        return utils.result_to_dict(session.execute(
+            sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id])
+            .where(cls.create_log_select_expression(kwargs))
+        ))
+
+    def va_list(self, session):
+        row_identifier = {
+            col_name: getattr(self, col_name) for col_name in self.ArchiveTable._version_col_names
+        }
+
+        return utils.result_to_dict(session.execute(
+            sa.select([self.ArchiveTable.va_id, self.ArchiveTable.user_id])
+            .where(self.create_log_select_expression(row_identifier))
+        ))
 
     @classmethod
     def va_get(cls, session, va_id):

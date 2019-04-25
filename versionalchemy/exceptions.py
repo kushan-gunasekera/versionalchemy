@@ -7,3 +7,7 @@ class LogTableCreationError(Exception):
 
 class RestoreError(Exception):
     pass
+
+
+class LogIdentifyError(Exception):
+    pass
