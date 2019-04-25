@@ -1,11 +1,16 @@
+import logging
 from datetime import datetime
 import json
 from sqlalchemy import Column, Integer, Boolean, DateTime, func
 import sqlalchemy as sa
-from  versionalchemy.api import data
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+
 from versionalchemy import utils
-from versionalchemy.exceptions import LogTableCreationError
+from versionalchemy.exceptions import LogTableCreationError, RestoreError
 import arrow
+
+log = logging.getLogger(__name__)
+
 
 class VALogMixin(object):
     """
@@ -213,13 +218,48 @@ class VAModelMixin(object):
     def va_restore(cls, session, va_id):
         vals = cls.va_get(session, va_id)
         row = session.query(cls).get(vals['id'])
-        print("NEW VALUES", vals)
-        ''''''
-        for a in cls.__table__.columns:
-            col_name = a.key
-            log_value = vals.get(col_name, None)
-            if log_value is not None and getattr(cls, col_name).type.python_type is datetime:
-                vals[col_name] = arrow.get(vals[col_name]).datetime
-            setattr(row, col_name, log_value)
-        session.commit()
+        default_columns = []
+        values = {}
+        for col_name, model_column in cls.__dict__.items():
+            if type(model_column) is not InstrumentedAttribute:
+                continue
+            if model_column.primary_key:
+                continue
+            if col_name in vals:
+                values[col_name] = vals.get(col_name)
+                if values[col_name] is not None and getattr(cls, col_name).type.python_type is datetime:
+                    values[col_name] = arrow.get(vals[col_name]).datetime
+            else:
+                if model_column.default:
+                    default_columns.append(col_name)
+                elif model_column.nullable:
+                    values[col_name] = None
+                    log.warning("Model '{}' has new column '{}' which has no default, using NULL".format(
+                        cls.__name__, col_name))
+                else:
+                    # This case should not be possible because NOT NULL column without default value,
+                    # SQL server should not allow this
+                    # OperationalError Cannot add a NOT NULL column with default value NULL
+                    # but we consider it for manual db schema modifications
+                    raise RestoreError(("Can't restore: model '{}' has new column '{}' "
+                                       "which has no default and not allow nullable").format(cls.__name__, col_name))
+
+        if default_columns:
+            # the only one gracefull way to set default onupdate in SQLAlchemey is to insert new record and
+            # then delete it - this will allow to reuse all existing logic which supports scalar, callables,
+            # and server-expressions
+            new_rec = cls(**values)
+            session.add(new_rec)
+            session.flush()
+            session.commit()
+
+            for d in default_columns:
+                values[d] = getattr(new_rec, d)
+                log.warning("Model '{}' has new column '{}' which using default value".format(
+                    cls.__name__, d))
+
+        for col_name, col_value in values.items():
+            setattr(row, col_name, col_value)
+
         session.flush()
+        session.commit()

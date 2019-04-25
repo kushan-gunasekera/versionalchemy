@@ -87,9 +87,10 @@ def get_column_attribute(row, col_name, use_dirty=True, dialect=None):
     changed; else this will return getattr(row, col_name)
     """
     bind_processor = get_bind_processor(row, col_name, dialect)
-    hist = getattr(sa.inspect(row).attrs, col_name).history
+    inspect_attr = getattr(sa.inspect(row).attrs, col_name, None)
+    hist = inspect_attr.history if inspect_attr else None
     getattr(row, col_name)
-    if not use_dirty and hist.has_changes():
+    if not use_dirty and hist and hist.has_changes():
         if hist.deleted:
             return bind_processor(hist.deleted[0])
         else:

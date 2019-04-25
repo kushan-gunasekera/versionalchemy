@@ -1,7 +1,7 @@
 import unittest
 
 import sqlalchemy as sa
-from sqlalchemy import func
+from sqlalchemy import func, String
 from sqlalchemy.orm import sessionmaker
 
 from tests.models import (
@@ -19,7 +19,7 @@ class VaTestHelpers(object):
     def _add_and_test_version(self, row, version):
         self.session.add(row)
         self.session.commit()
-        self.assertEquals(row.version(self.session), version)
+        self.assertEqual(row.version(self.session), version)
 
     def _result_to_dict(self, res):
         return utils.result_to_dict(res)
@@ -120,6 +120,7 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         super(SQLiteTestBase, self).__init__(methodName=methodName)
 
     def setUp(self):
+        print('setup')
         Base.metadata.create_all(self.engine)
         UserTable.register(ArchiveTable, self.engine)
         MultiColumnUserTable.register(MultiColumnArchiveTable, self.engine)
@@ -139,9 +140,17 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         self.engine.execute(delete_cmd.format(MultiColumnUserTable.__tablename__))
         self.engine.execute(delete_cmd.format(MultiColumnArchiveTable.__tablename__))
 
-    def addTestColumn(self):
-        self.dropAll()
-        setattr(UserTable, 'added_test_column', sa.Column)
-        Base.metadata.create_all(self.engine)
-        UserTable.register(ArchiveTable, self.engine)
-        MultiColumnUserTable.register(MultiColumnArchiveTable, self.engine)
+    def addTestNullableColumn(self):
+        setattr(UserTable, 'test_column1', sa.Column(String(50), nullable=True))
+        self.engine.execute('alter table {} add column `test_column1` VARCHAR(50) NULL;'.format(
+            UserTable.__tablename__))
+
+    def addTestDefaultColumn(self):
+        setattr(UserTable, 'test_column2', sa.Column(String(50), nullable=False, default=lambda: '123'))
+        self.engine.execute('alter table {} add column `test_column2` VARCHAR(50) NOT NULL DEFAULT "";'.format(
+            UserTable.__tablename__))
+
+    def addTestNoDefaultNoNullColumn(self):
+        setattr(UserTable, 'test_column3', sa.Column(String(50), nullable=False))
+        self.engine.execute('alter table {} add column `test_column3` VARCHAR(50) NOT NULL DEFAULT "";'.format(
+            UserTable.__tablename__))

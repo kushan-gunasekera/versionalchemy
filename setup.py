@@ -13,6 +13,7 @@ setup(
     install_requires=[
         'SQLAlchemy>=1.0.0',
         'simplejson',
+        'arrow'
     ],
     include_package_data=True,
     author='Akshay Nanavati',
