@@ -8,7 +8,6 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from versionalchemy import utils
 from versionalchemy.exceptions import LogTableCreationError, RestoreError
 import arrow
-
 log = logging.getLogger(__name__)
 
 
@@ -243,25 +242,36 @@ class VAModelMixin(object):
         session.commit()
 
     def va_diff(cls, session, va_id):
-        if va_id < 1:
-            print("This is the only version")
-            return {}
-        this_row = cls.va_get(session, va_id)
-        user_id = utils.result_to_dict(session.execute(
-                    sa.select({cls.ArchiveTable.user_id})
+
+        this_row = utils.result_to_dict(session.execute(
+                    sa.select({cls.ArchiveTable})
                     .where(cls.ArchiveTable.va_id == va_id)
-                    )
-                )[0]['user_id']
-        prev_row = cls.va_get(session, va_id-1)
+                    ))[0]
 
-        changes = utils.compare_dicts(prev_row, this_row)
-        changes.pop('va_id')
+        if va_id is 1:
+            return {
+                'va_prev_version': None,
+                'va_version': this_row['va_version'],
+                'user_id': this_row['user_id'],
+                'change': {key : {'prev':None,'this':value} for key, value in zip(this_row['va_data'].keys(), this_row['va_data'].values())}
+            }
 
+        prev_row = utils.result_to_dict(session.execute(
+                sa.select({cls.ArchiveTable})
+                .where(cls.ArchiveTable.va_id == va_id-1)
+        ))[0]
+
+        changes = utils.compare_dicts(prev_row['va_data'], this_row['va_data'])
         return {
-            'va_prev_version' : va_id-1,
-            'va_version': va_id,
-            'user_id': user_id,
+            'va_prev_version' : prev_row['va_version'],
+            'va_version': this_row['va_version'],
+            'user_id': this_row['user_id'],
             'change': changes
         }
 
+    def va_diff_all(cls, session, va_id):
+        all_changes = []
+        for id in range(1, va_id+1):
+            all_changes.append(cls.va_diff(session, id))
+        return all_changes
 
