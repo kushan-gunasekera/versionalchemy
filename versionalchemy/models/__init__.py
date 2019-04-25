@@ -218,49 +218,27 @@ class VAModelMixin(object):
     def va_restore(cls, session, va_id):
         vals = cls.va_get(session, va_id)
         row = session.query(cls).get(vals['id'])
-        default_columns = []
         values = {}
         for col_name, model_column in cls.__dict__.items():
             if type(model_column) is not InstrumentedAttribute:
-                continue
-            if model_column.primary_key:
                 continue
             if col_name in vals:
                 values[col_name] = vals.get(col_name)
                 if values[col_name] is not None and getattr(cls, col_name).type.python_type is datetime:
                     values[col_name] = arrow.get(vals[col_name]).datetime
             else:
-                if model_column.default:
-                    default_columns.append(col_name)
-                elif model_column.nullable:
+                if model_column.nullable:
                     values[col_name] = None
                     log.warning("Model '{}' has new column '{}' which has no default, using NULL".format(
                         cls.__name__, col_name))
                 else:
-                    # This case should not be possible because NOT NULL column without default value,
-                    # SQL server should not allow this
-                    # OperationalError Cannot add a NOT NULL column with default value NULL
-                    # but we consider it for manual db schema modifications
-                    raise RestoreError(("Can't restore: model '{}' has new column '{}' "
-                                       "which has no default and not allow nullable").format(cls.__name__, col_name))
-
-        if default_columns:
-            # the only one gracefull way to set default onupdate in SQLAlchemey is to insert new record and
-            # then delete it - this will allow to reuse all existing logic which supports scalar, callables,
-            # and server-expressions
-            new_rec = cls(**values)
-            session.add(new_rec)
-            session.flush()
-            session.commit()
-
-            for d in default_columns:
-                values[d] = getattr(new_rec, d)
-                log.warning("Model '{}' has new column '{}' which using default value".format(
-                    cls.__name__, d))
+                    raise RestoreError(
+                        ("We does not support non-nullable values that were added in new version of model"
+                         "'{}'. New column is '{}', please mark it as nullable to be able to restore").format(
+                            cls.__name__, col_name))
 
         for col_name, col_value in values.items():
             setattr(row, col_name, col_value)
-
         session.flush()
         session.commit()
 
@@ -269,8 +247,21 @@ class VAModelMixin(object):
             print("This is the only version")
             return {}
         this_row = cls.va_get(session, va_id)
+        user_id = utils.result_to_dict(session.execute(
+                    sa.select({cls.ArchiveTable.user_id})
+                    .where(cls.ArchiveTable.va_id == va_id)
+                    )
+                )[0]['user_id']
         prev_row = cls.va_get(session, va_id-1)
-        print(type(prev_row))
-        print(this_row)
+
         changes = utils.compare_dicts(prev_row, this_row)
-        print(changes)
+        changes.pop('va_id')
+
+        return {
+            'va_prev_version' : va_id-1,
+            'va_version': va_id,
+            'user_id': user_id,
+            'change': changes
+        }
+
+

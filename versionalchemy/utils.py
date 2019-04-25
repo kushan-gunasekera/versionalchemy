@@ -10,6 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.engine.reflection import Inspector
 
 def compare_dicts(old_d, new_d):
+
     changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
     changes = {}
     for pair in list(changed_values_set):
