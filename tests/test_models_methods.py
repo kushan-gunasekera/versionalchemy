@@ -72,11 +72,11 @@ class TestList(SQLiteTestBase):
         p = UserTable(**self.p1)
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
-        first_version = p.va_id
         p.col1 = 'test'
         self.session.commit()
         with self.assertRaises(LogIdentifyError):
-            res = UserTable.va_list_by_pk(self.session)
+            UserTable.va_list_by_pk(self.session)
+
 
 class TestDiff(SQLiteTestBase):
     def test_va_diff_basic(self):
@@ -169,8 +169,6 @@ class TestDiff(SQLiteTestBase):
         p1 = self.session.query(UserTable).get(p1.id)
         p2 = self.session.query(UserTable).get(p2.id)
 
-        first_p1_version = p1.va_id
-        first_p2_version = p2.va_id
         p1.col1 = 'test1'
         p2.col1 = 'test2'
         p1._updated_by = '1'
@@ -228,6 +226,47 @@ class TestGet(SQLiteTestBase):
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
         with self.assertRaises(IndexError):
-            p.va_get(self.session, p.va_id+372)
+            p.va_get(self.session, p.va_id + 372)
+
+    def test_va_get_all(self):
+        p = UserTable(**self.p1)
+        p._updated_by = '1'
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        p.col1 = 'test'
+        p._updated_by = '2'
+        self.session.commit()
+        expected_result = [
+            {
+                'record': {
+                    'col1': 'foobar',
+                    'col2': 10,
+                    'col3': 1,
+                    'id': 1,
+                    'other_name': None,
+                    'product_id': 10
+                },
+                'user_id': '1',
+                'va_id': 1,
+                'va_version': 0
+            },
+            {
+                'record': {
+                    'col1': 'test',
+                    'col2': 10,
+                    'col3': 1,
+                    'id': 1,
+                    'other_name': None,
+                    'product_id': 10
+                },
+                'user_id': '2',
+                'va_id': 2,
+                'va_version': 1
+            }
+        ]
+        res = p.va_get_all(self.session)
+        self.assertEqual(res, expected_result)
+        res = UserTable.va_get_all_by_pk(self.session, product_id=p.product_id)
+        self.assertEqual(res, expected_result)
 
 
