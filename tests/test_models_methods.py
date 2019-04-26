@@ -75,7 +75,7 @@ class TestList(SQLiteTestBase):
         first_version = p.va_id
         p.col1 = 'test'
         self.session.commit()
-        with self.assertRaises (LogIdentifyError):
+        with self.assertRaises(LogIdentifyError):
             res = UserTable.va_list_by_pk(self.session)
 
 class TestDiff(SQLiteTestBase):
@@ -204,7 +204,6 @@ class TestDiff(SQLiteTestBase):
         })
 
 
-
 class TestGet(SQLiteTestBase):
     def test_va_get(self):
         p = UserTable(**self.p1)
@@ -212,14 +211,22 @@ class TestGet(SQLiteTestBase):
         p = self.session.query(UserTable).get(p.id)
         res = p.va_get(self.session, p.va_id)
         self.assertEqual(res,
-                {'other_name': None, 'id': p.id, 'product_id': p.product_id, 'col1': p.col1, 'col2': p.col2, 'col3': p.col3, 'va_id': p.va_id}
-            )
+            {
+                'other_name': None,
+                'id': p.id,
+                'product_id': p.product_id,
+                'col1': p.col1,
+                'col2': p.col2,
+                'col3': p.col3,
+                'va_id': p.va_id
+            }
+        )
 
     def test_va_get_fails(self):
         p = UserTable(**self.p1)
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
-        with self.assertRaises (IndexError):
-            res = p.va_get(self.session, p.va_id+372)
+        with self.assertRaises(IndexError):
+            p.va_get(self.session, p.va_id+372)
 
 
