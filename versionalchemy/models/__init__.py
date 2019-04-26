@@ -266,14 +266,12 @@ class VAModelMixin(object):
 
     @classmethod
     def va_diff(cls, session, va_id):
-
         this_row = utils.result_to_dict(session.execute(
             sa.select({cls.ArchiveTable}).where(cls.ArchiveTable.va_id == va_id)
         ))
         if not len(this_row):
             raise HistoryItemNotFound('HistoryItem with id {} does not exist'.format(va_id))
         this_row = this_row[0]
-
         all_history_items = {
            col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
         }
@@ -283,16 +281,8 @@ class VAModelMixin(object):
             ]
         print('PREV LOG',prev_log)
         if not prev_log:
-            return {
-                'va_prev_version': None,
-                'va_version': this_row['va_version'],
-                'prev_user_id' : None,
-                'user_id': this_row['user_id'],
-                'change': {
-                    key: {'prev': None, 'this': value} for key, value in zip(this_row['va_data'].keys(),
-                                                                             this_row['va_data'].values())
-                }
-            }
+            return utils.compare_rows(None, this_row)
+
 
         prev_va_id = prev_log[-1]['va_id']
         prev_row = utils.result_to_dict(session.execute(
@@ -300,14 +290,7 @@ class VAModelMixin(object):
                 .where(cls.ArchiveTable.va_id == prev_va_id)
         ))[0]
 
-        changes = utils.compare_dicts(prev_row['va_data'], this_row['va_data'])
-        return {
-            'va_prev_version': prev_row['va_version'],
-            'va_version': this_row['va_version'],
-            'prev_user_id':prev_row['user_id'],
-            'user_id': this_row['user_id'],
-            'change': changes
-        }
+        return utils.compare_rows(prev_row, this_row)
 
     def va_diff_all(self, session):
         return self.va_diff_all_by_pk(session, **self.get_row_identifier())
@@ -315,16 +298,18 @@ class VAModelMixin(object):
     @classmethod
     def va_diff_all_by_pk(cls, session, **kwargs):
         all_history_items = utils.result_to_dict(session.execute(
-            sa.select([
-                cls.ArchiveTable.va_id,
-                cls.ArchiveTable.user_id,
-                cls.ArchiveTable.va_data
-            ])
-            .where(cls.create_log_select_expression(kwargs))
+            sa.select([cls.ArchiveTable])
+                .where(cls.create_log_select_expression(kwargs))
         ))
-        # todo iterate and generate result
+        all_changes = []
+        for i in range(len(all_history_items)):
+            print(all_history_items[i])
+            if i is 0:
+                all_changes.append(utils.compare_rows(None, all_history_items[i]))
+            else:
+                all_changes.append(utils.compare_rows(all_history_items[i-1], all_history_items[i]))
 
-        return []
+        return all_changes
 
     @classmethod
     def va_get_all_by_pk(cls, session, **kwargs):

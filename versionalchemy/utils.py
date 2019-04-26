@@ -10,6 +10,11 @@ from sqlalchemy import (
 from sqlalchemy.engine.reflection import Inspector
 
 def compare_dicts(old_d, new_d):
+    if not old_d:
+        old_d = {}
+        for key in new_d.keys():
+            old_d[key]=None
+
     changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
     changes = {}
     for pair in list(changed_values_set):
@@ -26,6 +31,20 @@ def compare_dicts(old_d, new_d):
             changes[pair[0]]['prev'] = pair[1]
             changes[pair[0]]['this'] = None
     return changes
+
+def compare_rows(old_r, new_r):
+    if not old_r:
+        old_r = {}
+        for key in new_r.keys():
+            old_r[key] = None
+    print("OLD ROW",old_r)
+    return {
+        'va_prev_version': old_r['va_version'],
+        'va_version': new_r['va_version'],
+        'prev_user_id': old_r['user_id'],
+        'user_id': new_r['user_id'],
+        'change': compare_dicts(old_r['va_data'], new_r['va_data'])
+    }
 
 def result_to_dict(res):
     """

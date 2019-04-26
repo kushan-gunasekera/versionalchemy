@@ -109,14 +109,17 @@ class TestDiff(SQLiteTestBase):
         p._updated_by = '1'
         self._add_and_test_version(p, 0)
 
+        print("111", p.__table__.c)
         self.addTestNullableColumn()
         p = self.session.query(UserTable).get(p.id)
+        print("222", p.__table__.c)
         p.col1 = 'test'
         p.test_column1 = 'tc1'
         p._updated_by = '2'
         self.session.commit()
 
         res = UserTable.va_diff(self.session, va_id=p.va_id)
+        print("RESULT", res)
         self.assertEqual(res, {
             'va_prev_version': 0,
             'va_version': 1,
@@ -133,13 +136,16 @@ class TestDiff(SQLiteTestBase):
                 }
             }
         })
-
+        print("PASSED")
         self.deleteTestNullableColumn()
+        print("DELETED")
         p = self.session.query(UserTable).get(p.id)
+        print("P COLS", p.__table__.c)
         p.col1 = 'test2'
         self.session.commit()
 
         res = UserTable.va_diff(self.session, va_id=p.va_id)
+        print("ANOTHER RES", res)
         self.assertEqual(res, {
             'va_prev_version': 1,
             'va_version': 2,
@@ -162,8 +168,8 @@ class TestDiff(SQLiteTestBase):
         p._updated_by = '1'
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
+
         res = UserTable.va_diff(self.session, va_id=p.va_id)
-        print("RESULT", res)
         self.assertEqual(res, {
             'va_prev_version': None,
             'va_version': 0,
@@ -173,7 +179,11 @@ class TestDiff(SQLiteTestBase):
                 'col1': {
                     'this': 'foobar',
                     'prev': None
-                }
+                },
+                'col2': {'this': 10, 'prev': None},
+                'col3': {'prev': None, 'this': 1},
+                'product_id': {'prev': None, 'this': 10},
+                'id': {'this': 1, 'prev': None}
             }
         })
 
@@ -195,7 +205,11 @@ class TestDiff(SQLiteTestBase):
                 'col1': {
                     'this': 'foobar',
                     'prev': None
-                }
+                },
+                'col2': {'this': 10, 'prev': None},
+                'col3': {'prev': None, 'this': 1},
+                'product_id': {'prev': None, 'this': 10},
+                'id': {'this': 1, 'prev': None}
             }
         }, {
             'va_prev_version': 0,
@@ -223,10 +237,9 @@ class TestDiff(SQLiteTestBase):
         self._add_and_test_version(p2, 0)
         p1 = self.session.query(UserTable).get(p1.id)
         p2 = self.session.query(UserTable).get(p2.id)
-
         p1.col1 = 'test1'
         p2.col1 = 'test2'
-        p1._updated_by = '1'
+        p1._updated_by = '2'
         p2._updated_by = '2'
         self.session.commit()
         res_p1 = UserTable.va_diff(self.session, va_id=p1.va_id)
@@ -242,7 +255,6 @@ class TestDiff(SQLiteTestBase):
                 }
             }
         })
-
         res_p2 = UserTable.va_diff(self.session, va_id=p2.va_id)
         self.assertEqual(res_p2, {
             'va_prev_version': 0,
@@ -251,8 +263,8 @@ class TestDiff(SQLiteTestBase):
             'user_id': '2',
             'change': {
                 'col1': {
-                    'this': 'test1',
-                    'prev': 'foobar'
+                    'this': 'test2',
+                    'prev': 'baz'
                 }
             }
         })
