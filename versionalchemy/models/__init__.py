@@ -304,9 +304,29 @@ class VAModelMixin(object):
     @classmethod
     def va_diff_all_by_pk(cls, session, **kwargs):
         all_history_items = utils.result_to_dict(session.execute(
-            sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id, cls.ArchiveTable.va_data])
+            sa.select([
+                cls.ArchiveTable.va_id,
+                cls.ArchiveTable.user_id,
+                cls.ArchiveTable.va_data
+            ])
             .where(cls.create_log_select_expression(kwargs))
         ))
         # todo iterate and generate result
 
         return []
+
+    @classmethod
+    def va_get_all_by_pk(cls, session, **kwargs):
+        all_history_items = utils.result_to_dict(session.execute(
+            sa.select([
+                cls.ArchiveTable.va_id,
+                cls.ArchiveTable.va_version,
+                cls.ArchiveTable.user_id,
+                cls.ArchiveTable.va_data.label('record')
+            ]).where(
+                cls.create_log_select_expression(kwargs))
+        ))
+        return all_history_items
+
+    def va_get_all(self, session):
+        return self.va_get_all_by_pk(session, **self.get_row_identifier())
