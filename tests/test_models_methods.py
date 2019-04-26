@@ -142,15 +142,15 @@ class TestDiff(SQLiteTestBase):
         p = self.session.query(UserTable).get(p.id)
         print("P COLS", p.__table__.c)
         p.col1 = 'test2'
+        p._updated_by = '1'
         self.session.commit()
-
         res = UserTable.va_diff(self.session, va_id=p.va_id)
         print("ANOTHER RES", res)
         self.assertEqual(res, {
             'va_prev_version': 1,
             'va_version': 2,
             'prev_user_id': '2',
-            'user_id': None,
+            'user_id': '1',
             'change': {
                 'col1': {
                     'this': 'test2',

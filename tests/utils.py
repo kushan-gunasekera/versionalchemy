@@ -171,10 +171,12 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
             pass
 
     def deleteTestNullableColumn(self):
+        UserTable.__mapper__._dispose_called = True
         delattr(UserTable, 'test_column1')
         sa.inspect(UserTable).mapper._expire_memoizations()
         del sa.inspect(UserTable).mapper.columns['test_column1']
         del sa.inspect(UserTable).mapper._props['test_column1']
+        UserTable.__mapper__._dispose_called = False
 
     def addTestNoDefaultNoNullColumn(self):
         setattr(UserTable, 'test_column3', sa.Column(String(50), nullable=False))
