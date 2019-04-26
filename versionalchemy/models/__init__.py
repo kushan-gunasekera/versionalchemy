@@ -274,10 +274,19 @@ class VAModelMixin(object):
             raise HistoryItemNotFound('HistoryItem with id {} does not exist'.format(va_id))
         this_row = this_row[0]
 
-        if va_id is 1:
+        all_history_items = {
+           col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
+        }
+        print('ALL HIST ITEMS', all_history_items)
+        prev_log = [
+            log for log in cls.va_list_by_pk(session, **all_history_items) if log['va_id'] < va_id
+            ]
+        print('PREV LOG',prev_log)
+        if not prev_log:
             return {
                 'va_prev_version': None,
                 'va_version': this_row['va_version'],
+                'prev_user_id' : None,
                 'user_id': this_row['user_id'],
                 'change': {
                     key: {'prev': None, 'this': value} for key, value in zip(this_row['va_data'].keys(),
@@ -285,15 +294,17 @@ class VAModelMixin(object):
                 }
             }
 
+        prev_va_id = prev_log[-1]['va_id']
         prev_row = utils.result_to_dict(session.execute(
                 sa.select({cls.ArchiveTable})
-                .where(cls.ArchiveTable.va_id == va_id-1)
+                .where(cls.ArchiveTable.va_id == prev_va_id)
         ))[0]
 
         changes = utils.compare_dicts(prev_row['va_data'], this_row['va_data'])
         return {
             'va_prev_version': prev_row['va_version'],
             'va_version': this_row['va_version'],
+            'prev_user_id':prev_row['user_id'],
             'user_id': this_row['user_id'],
             'change': changes
         }

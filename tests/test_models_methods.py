@@ -108,6 +108,7 @@ class TestDiff(SQLiteTestBase):
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
         res = UserTable.va_diff(self.session, va_id=p.va_id)
+        print("RESULT", res)
         self.assertEqual(res, {
             'va_prev_version': None,
             'va_version': 0,

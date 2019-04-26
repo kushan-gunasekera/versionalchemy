@@ -10,7 +10,6 @@ from sqlalchemy import (
 from sqlalchemy.engine.reflection import Inspector
 
 def compare_dicts(old_d, new_d):
-
     changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
     changes = {}
     for pair in list(changed_values_set):
@@ -113,7 +112,8 @@ def get_column_attribute(row, col_name, use_dirty=True, dialect=None):
             return bind_processor(hist.deleted[0])
         else:
             return None
-    return bind_processor(getattr(row, col_name))
+    attr = getattr(row, col_name) if not type(getattr(row, col_name)) is tuple else (getattr(row, col_name)[0])
+    return bind_processor(attr)
 
 
 def get_column_keys(table):
