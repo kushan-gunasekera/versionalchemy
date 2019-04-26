@@ -72,11 +72,11 @@ class TestList(SQLiteTestBase):
         p = UserTable(**self.p1)
         self._add_and_test_version(p, 0)
         p = self.session.query(UserTable).get(p.id)
-        first_version = p.va_id
         p.col1 = 'test'
         self.session.commit()
         with self.assertRaises(LogIdentifyError):
-            res = UserTable.va_list_by_pk(self.session)
+            UserTable.va_list_by_pk(self.session)
+
 
 class TestDiff(SQLiteTestBase):
     def test_va_diff_basic(self):
