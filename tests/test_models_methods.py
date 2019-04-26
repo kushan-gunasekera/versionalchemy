@@ -46,19 +46,6 @@ class TestRestore(SQLiteTestBase):
 
 
 class TestList(SQLiteTestBase):
-    def test_va_list_by_pk(self):
-        p = UserTable(**self.p1)
-        self._add_and_test_version(p, 0)
-        p = self.session.query(UserTable).get(p.id)
-        first_version = p.va_id
-        p.col1 = 'test'
-        self.session.commit()
-        res = UserTable.va_list_by_pk(self.session, product_id=p.product_id)
-        self.assertEqual(res, [
-            {'va_id': first_version, 'user_id': None},
-            {'va_id': first_version + 1, 'user_id': None}
-        ])
-
     def test_va_list(self):
         p = UserTable(**self.p1)
         self._add_and_test_version(p, 0)
@@ -67,7 +54,136 @@ class TestList(SQLiteTestBase):
         p.col1 = 'test'
         self.session.commit()
         res = p.va_list(self.session)
-        self.assertEqual(res, [
+
+        expected_response = [
             {'va_id': first_version, 'user_id': None},
             {'va_id': first_version + 1, 'user_id': None}
-        ])
+        ]
+        self.assertEqual(res, expected_response)
+        res = UserTable.va_list_by_pk(self.session, product_id=p.product_id)
+        self.assertEqual(res, expected_response)
+
+
+class TestDiff(SQLiteTestBase):
+    def test_va_diff_basic(self):
+        p = UserTable(**self.p1)
+        p._updated_by = '1'
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        p.col1 = 'test'
+        p._updated_by = '2'
+        self.session.commit()
+        res = UserTable.va_diff(self.session, va_id=p.va_id)
+        self.assertEqual(res, {
+            'va_prev_version': 0,
+            'va_version': 1,
+            'prev_user_id': '1',
+            'user_id': '2',
+            'change': {
+                'col1': {
+                    'this': 'test',
+                    'prev': 'foobar'
+                }
+            }
+        })
+
+    def test_va_diff_first_version(self):
+        p = UserTable(**self.p1)
+        p._updated_by = '1'
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        res = UserTable.va_diff(self.session, va_id=p.va_id)
+        self.assertEqual(res, {
+            'va_prev_version': None,
+            'va_version': 0,
+            'prev_user_id': None,
+            'user_id': '1',
+            'change': {
+                'col1': {
+                    'this': 'foobar',
+                    'prev': None
+                }
+            }
+        })
+
+    def test_va_diff_all(self):
+        p = UserTable(**self.p1)
+        p._updated_by = '1'
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        p.col1 = 'test'
+        p._updated_by = '2'
+        self.session.commit()
+        res = UserTable.va_diff_all_by_pk(self.session, product_id=p.product_id)
+        expected_result = [{
+            'va_prev_version': None,
+            'va_version': 0,
+            'prev_user_id': None,
+            'user_id': '1',
+            'change': {
+                'col1': {
+                    'this': 'foobar',
+                    'prev': None
+                }
+            }
+        }, {
+            'va_prev_version': 0,
+            'va_version': 1,
+            'prev_user_id': '1',
+            'user_id': '2',
+            'change': {
+                'col1': {
+                    'this': 'test',
+                    'prev': 'foobar'
+                }
+            }
+        }]
+        self.assertEqual(res, expected_result)
+        res = p.va_diff_all(self.session)
+        self.assertEqual(res, expected_result)
+
+    def test_va_diff_2parallel_history(self):
+        p1 = UserTable(**self.p1)
+        p2 = UserTable(**self.p2)
+        p1._updated_by = '1'
+        p2._updated_by = '1'
+
+        self._add_and_test_version(p1, 0)
+        self._add_and_test_version(p2, 0)
+        p1 = self.session.query(UserTable).get(p1.id)
+        p2 = self.session.query(UserTable).get(p2.id)
+
+        first_p1_version = p1.va_id
+        first_p2_version = p2.va_id
+        p1.col1 = 'test1'
+        p2.col1 = 'test2'
+        p1._updated_by = '1'
+        p2._updated_by = '2'
+        self.session.commit()
+        res_p1 = UserTable.va_diff(self.session, va_id=p1.va_id)
+        self.assertEqual(res_p1, {
+            'va_prev_version': 0,
+            'va_version': 1,
+            'prev_user_id': '1',
+            'user_id': '2',
+            'change': {
+                'col1': {
+                    'this': 'test1',
+                    'prev': 'foobar'
+                }
+            }
+        })
+
+        res_p2 = UserTable.va_diff(self.session, va_id=p2.va_id)
+        self.assertEqual(res_p2, {
+            'va_prev_version': 0,
+            'va_version': 1,
+            'prev_user_id': '1',
+            'user_id': '2',
+            'change': {
+                'col1': {
+                    'this': 'test1',
+                    'prev': 'foobar'
+                }
+            }
+        })

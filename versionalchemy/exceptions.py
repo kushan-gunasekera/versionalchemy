@@ -11,3 +11,7 @@ class RestoreError(Exception):
 
 class LogIdentifyError(Exception):
     pass
+
+
+class HistoryItemNotFound(Exception):
+    pass

@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from versionalchemy import utils
-from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError
+from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError, HistoryItemNotFound
 import arrow
 log = logging.getLogger(__name__)
 
@@ -218,27 +218,23 @@ class VAModelMixin(object):
             .where(cls.create_log_select_expression(kwargs))
         ))
 
-    def va_list(self, session):
-        row_identifier = {
+    def get_row_identifier(self):
+        return {
             col_name: getattr(self, col_name) for col_name in self.ArchiveTable._version_col_names
         }
 
-        return utils.result_to_dict(session.execute(
-            sa.select([self.ArchiveTable.va_id, self.ArchiveTable.user_id])
-            .where(self.create_log_select_expression(row_identifier))
-        ))
+    def va_list(self, session):
+        return self.va_list_by_pk(session, **self.get_row_identifier())
 
     @classmethod
     def va_get(cls, session, va_id):
-        if va_id is not None:
-            result = utils.result_to_dict(session.execute(
-                    sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
-                    .where(cls.ArchiveTable.va_id == va_id)
-                    )
-                )[0]
-            historicObject = result['va_data']
-            historicObject['va_id'] = result['va_id']
-            return historicObject
+        result = utils.result_to_dict(session.execute(
+                sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
+                .where(cls.ArchiveTable.va_id == va_id)
+        ))[0]
+        historic_object = result['va_data']
+        historic_object['va_id'] = result['va_id']
+        return historic_object
 
     @classmethod
     def va_restore(cls, session, va_id):
@@ -268,19 +264,25 @@ class VAModelMixin(object):
         session.flush()
         session.commit()
 
+    @classmethod
     def va_diff(cls, session, va_id):
 
         this_row = utils.result_to_dict(session.execute(
-                    sa.select({cls.ArchiveTable})
-                    .where(cls.ArchiveTable.va_id == va_id)
-                    ))[0]
+            sa.select({cls.ArchiveTable}).where(cls.ArchiveTable.va_id == va_id)
+        ))
+        if not len(this_row):
+            raise HistoryItemNotFound('HistoryItem with id {} does not exist'.format(va_id))
+        this_row = this_row[0]
 
         if va_id is 1:
             return {
                 'va_prev_version': None,
                 'va_version': this_row['va_version'],
                 'user_id': this_row['user_id'],
-                'change': {key : {'prev':None,'this':value} for key, value in zip(this_row['va_data'].keys(), this_row['va_data'].values())}
+                'change': {
+                    key: {'prev': None, 'this': value} for key, value in zip(this_row['va_data'].keys(),
+                                                                             this_row['va_data'].values())
+                }
             }
 
         prev_row = utils.result_to_dict(session.execute(
@@ -290,15 +292,21 @@ class VAModelMixin(object):
 
         changes = utils.compare_dicts(prev_row['va_data'], this_row['va_data'])
         return {
-            'va_prev_version' : prev_row['va_version'],
+            'va_prev_version': prev_row['va_version'],
             'va_version': this_row['va_version'],
             'user_id': this_row['user_id'],
             'change': changes
         }
 
-    def va_diff_all(cls, session, va_id):
-        all_changes = []
-        for id in range(1, va_id+1):
-            all_changes.append(cls.va_diff(session, id))
-        return all_changes
+    def va_diff_all(self, session):
+        return self.va_diff_all_by_pk(session, **self.get_row_identifier())
 
+    @classmethod
+    def va_diff_all_by_pk(cls, session, **kwargs):
+        all_history_items = utils.result_to_dict(session.execute(
+            sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id, cls.ArchiveTable.va_data])
+            .where(cls.create_log_select_expression(kwargs))
+        ))
+        # todo iterate and generate result
+
+        return []
