@@ -7,6 +7,8 @@ from tests.models import (
 from tests.utils import (
     SQLiteTestBase,
 )
+from datetime import datetime
+
 from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError
 
 class TestRestore(SQLiteTestBase):
@@ -89,18 +91,17 @@ class TestGet(SQLiteTestBase):
     def test_va_get(self):
         p = UserTable(**self.p1)
         self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        res = p.va_get(self.session, p.va_id)
+        self.assertEqual(res,
+                {'other_name': None, 'id': p.id, 'product_id': p.product_id, 'col1': p.col1, 'col2': p.col2, 'col3': p.col3, 'va_id': p.va_id}
+            )
 
-        pa = self.session.query(ArchiveTable).get(p.va_id)
-        print("PA", pa.va_id)
-
-        to_insert = {
-            'va_version': 0,
-            'va_deleted': False,
-            'user_id': 'foo',
-            'va_updated_at': datetime.now(),
-            'va_data': {},
-            'product_id': p.product_id,
-        }
-        self.session.add(ArchiveTable(**to_insert))
+    def test_va_get_fails(self):
+        p = UserTable(**self.p1)
+        self._add_and_test_version(p, 0)
+        p = self.session.query(UserTable).get(p.id)
+        with self.assertRaises (IndexError):
+            res = p.va_get(self.session, p.va_id+372)
 
 
