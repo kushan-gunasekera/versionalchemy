@@ -185,7 +185,7 @@ va_diff_all(session, `**kwargs`)
 
 Returns differences between all version of a certain record.
 
-Call: *model.va_diff_all(session, id = 1)*
+Call : *model.va_diff_all(session, id = 1)*
 
 Proposed return object:
 
@@ -260,7 +260,7 @@ va_get_all(session)
 ~~~~~~~~~~~~~~~~~~~
 Returns all version of a certain record.
 
-Call: *model.va_get_all(session)*
+Call example: *model.va_get_all(session)*
 
 Proposed return object:
 

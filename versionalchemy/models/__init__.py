@@ -213,6 +213,10 @@ class VAModelMixin(object):
 
     @classmethod
     def va_list_by_pk(cls, session, **kwargs):
+        """
+        Returns all VA version id's of this record with there corresponding user_id.
+        This can be called after a row has been inserted into the table and the session has been flushed.
+        """
         return utils.result_to_dict(session.execute(
             sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id])
             .where(cls.create_log_select_expression(kwargs))
@@ -224,10 +228,26 @@ class VAModelMixin(object):
         }
 
     def va_list(self, session):
+        """
+        Returns all VA version id's of this record with there corresponding user_id.
+        This can be called after a row has been inserted into the table and the session has been flushed.
+        :param session: flushed session
+        :return: a list of dicts with va_id and user_id as keys and their values
+        :rtype: list
+        """
         return self.va_list_by_pk(session, **self.get_row_identifier())
 
     @classmethod
     def va_get(cls, session, va_id):
+        """
+        Returns historic object (log record).
+        This can be called after a row has been inserted into the table and the session has been flushed.
+        :param session: flushed session
+        :param va_id: version id of requested  record
+        :return: a dictionary of key value pairs representing version id, id of the record in model,
+         and versioned model's data
+        :rtype: dict
+        """
         result = utils.result_to_dict(session.execute(
                 sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
                 .where(cls.ArchiveTable.va_id == va_id)
@@ -238,6 +258,14 @@ class VAModelMixin(object):
 
     @classmethod
     def va_restore(cls, session, va_id):
+        """
+        Restores historic object.
+        If column was  not included in older version, then it should be nullable. \
+        This method will set new value to null. Othervise, it rases exception.
+        :param session: flushed session
+        :param va_id: version id of  record to be restored
+        :return: None
+        """
         vals = cls.va_get(session, va_id)
         row = session.query(cls).get(vals['id'])
         values = {}
@@ -266,6 +294,13 @@ class VAModelMixin(object):
 
     @classmethod
     def va_diff(cls, session, va_id):
+        """
+        Compares version with passed 'va_id' with previous version.
+        :param session: flushed session
+        :param va_id: version id of log row to be compared
+        :return: dict with versions, user_id's and dict with columns as keys and changes as values
+        :return: dict
+        """
         this_row = utils.result_to_dict(session.execute(
             sa.select({cls.ArchiveTable}).where(cls.ArchiveTable.va_id == va_id)
         ))
@@ -275,11 +310,9 @@ class VAModelMixin(object):
         all_history_items = {
            col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
         }
-        print('ALL HIST ITEMS', all_history_items)
         prev_log = [
             log for log in cls.va_list_by_pk(session, **all_history_items) if log['va_id'] < va_id
             ]
-        print('PREV LOG',prev_log)
         if not prev_log:
             return utils.compare_rows(None, this_row)
 
@@ -303,7 +336,6 @@ class VAModelMixin(object):
         ))
         all_changes = []
         for i in range(len(all_history_items)):
-            print(all_history_items[i])
             if i is 0:
                 all_changes.append(utils.compare_rows(None, all_history_items[i]))
             else:

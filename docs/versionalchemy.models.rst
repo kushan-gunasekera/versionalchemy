@@ -6,3 +6,4 @@ versionalchemy.models package
     :undoc-members:
     :show-inheritance:
 
+mixin providing the schema for
