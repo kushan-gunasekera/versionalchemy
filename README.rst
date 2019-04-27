@@ -104,7 +104,7 @@ Let's change value:
     session.commit()
     print(item.va_list(session))
     # [
-    #		{'va_id': 123, 'user_id': 'user_id_1'}, 
+    #       {'va_id': 123, 'user_id': 'user_id_1'}, 
     #       {'va_id': 124, 'user_id': 'user_id_2'},     
     # ]
 
