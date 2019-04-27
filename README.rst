@@ -70,6 +70,7 @@ Model methods
 Assume we create a new model:
 
 .. code-block:: python
+
     item = Example(value='initial') 
     item._updated_by = 'user_id_1'  # you can use integer user identifier here from your authorized user model, for versionalchemey it is just a tag
     session.add(item)
@@ -79,6 +80,7 @@ Assume we create a new model:
 This will add first version in `example_archive` table and sets `va_id` on instance, e.g.
 
 .. code-block:: python
+
     item = session.query(UserTable).get(item.id)
     print(item.va_id)  # 123
 
@@ -86,6 +88,7 @@ This will add first version in `example_archive` table and sets `va_id` on insta
 Now we can use `va_list` to show all versions:
 
 .. code-block:: python
+
     print(item.va_list(session))
     # [
     #		{'va_id': 123, 'user_id': 'user_id_1'},        
@@ -95,6 +98,7 @@ Now we can use `va_list` to show all versions:
 Let's change value:
 
 .. code-block:: python
+
     item.val = 'changed'
     item._updated_by = 'user_id_2'
     session.commit()
@@ -107,6 +111,7 @@ Let's change value:
 You can get specific version of model using `va_get`:
 
 .. code-block:: python
+
     item.va_get(session, 123)
     # {
     #  'va_id': 123, 
@@ -118,6 +123,7 @@ You can get specific version of model using `va_get`:
 You can also get all revisions:
 
 .. code-block:: python
+
     item.va_get_all(session)
     # [
     #   {
@@ -136,6 +142,7 @@ You can also get all revisions:
 To check difference betweeen current and previous versions use `va_diff`:
 
 .. code-block:: python
+
     item.va_diff(session, 124)
     # {
     #   'va_prev_version': 1,
@@ -155,6 +162,7 @@ To check difference betweeen current and previous versions use `va_diff`:
 
 
 .. code-block:: python
+
     item.va_diff_all(session)
     # [
     #   {
@@ -188,6 +196,7 @@ To check difference betweeen current and previous versions use `va_diff`:
 You can restore some previous version using `va_restore`:
 
 .. code-block:: python
+
     item.va_restore(session, 123)
     item = session.query(UserTable).get(item.id)
     print(item.value)  # initial
