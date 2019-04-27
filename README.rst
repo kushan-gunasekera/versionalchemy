@@ -69,130 +69,129 @@ Model methods
 
 Assume we create a new model:
 
-```
-item = Example(value='initial') 
-item._updated_by = 'user_id_1'  # you can use integer user identifier here from your authorized user model, for versionalchemey it is just a tag
-session.add(item)
-session.commit()  
-```
+.. code-block:: python
+    item = Example(value='initial') 
+    item._updated_by = 'user_id_1'  # you can use integer user identifier here from your authorized user model, for versionalchemey it is just a tag
+    session.add(item)
+    session.commit()  
+
 
 This will add first version in `example_archive` table and sets `va_id` on instance, e.g.
 
-```
-item = session.query(UserTable).get(item.id)
-print(item.va_id)  # 123
-```
+.. code-block:: python
+    item = session.query(UserTable).get(item.id)
+    print(item.va_id)  # 123
+
 
 Now we can use `va_list` to show all versions:
 
-```
-print(item.va_list(session))
-# [
-#		{'va_id': 123, 'user_id': 'user_id_1'},        
-# ]
-```
+.. code-block:: python
+    print(item.va_list(session))
+    # [
+    #		{'va_id': 123, 'user_id': 'user_id_1'},        
+    # ]
+
 
 Let's change value:
 
-```
-item.val = 'changed'
-item._updated_by = 'user_id_2'
-session.commit()
-print(item.va_list(session))
-# [
-#		{'va_id': 123, 'user_id': 'user_id_1'}, 
-#       {'va_id': 124, 'user_id': 'user_id_2'},     
-# ]
-```
+.. code-block:: python
+    item.val = 'changed'
+    item._updated_by = 'user_id_2'
+    session.commit()
+    print(item.va_list(session))
+    # [
+    #		{'va_id': 123, 'user_id': 'user_id_1'}, 
+    #       {'va_id': 124, 'user_id': 'user_id_2'},     
+    # ]
 
 You can get specific version of model using `va_get`:
 
-```
-item.va_get(session, 123)
-# {
-#  'va_id': 123, 
-#  'id': 1, 
-#  'value': 'initial'    
-# }
-```
+.. code-block:: python
+    item.va_get(session, 123)
+    # {
+    #  'va_id': 123, 
+    #  'id': 1, 
+    #  'value': 'initial'    
+    # }
+
 
 You can also get all revisions:
 
-```
-item.va_get_all(session)
-# [
-#   {
-#     'va_id': 123, 
-#     'id': 1, 
-#     'value': 'initial'    
-#   },
-#   {
-#     'va_id': 124, 
-#     'id': 1, 
-#     'value': 'changed'    
-#   }
-# ]
-```
+.. code-block:: python
+    item.va_get_all(session)
+    # [
+    #   {
+    #     'va_id': 123, 
+    #     'id': 1, 
+    #     'value': 'initial'    
+    #   },
+    #   {
+    #     'va_id': 124, 
+    #     'id': 1, 
+    #     'value': 'changed'    
+    #   }
+    # ]
+
 
 To check difference betweeen current and previous versions use `va_diff`:
 
-```
-item.va_diff(session, 124)
-# {
-#   'va_prev_version': 1,
-#   'va_version': 2,
-#   'prev_user_id': 'user_id_1',
-#   'user_id': 'user_id_2',
-#   'change': {
-#     'value': {
-#       'prev': 'initial',
-#       'this': 'changed'
-#     }
-#   }
-# }
-```
+.. code-block:: python
+    item.va_diff(session, 124)
+    # {
+    #   'va_prev_version': 1,
+    #   'va_version': 2,
+    #   'prev_user_id': 'user_id_1',
+    #   'user_id': 'user_id_2',
+    #   'change': {
+    #     'value': {
+    #       'prev': 'initial',
+    #       'this': 'changed'
+    #     }
+    #   }
+    # }
+
 
 `va_diff_all` will show you diffs between all versions:
 
 
-```
-# [
-#   {
-#     'va_prev_version': 0,
-#     'va_version': 1,
-#     'prev_user_id': None,
-#     'user_id': 'user_id_1',
-#     'change': {
-#       'value': {
-#         'prev': None,
-#         'this': 'initial'
-#       }
-#     }
-#   },
-#   {
-#     'va_prev_version': 1,
-#     'va_version': 2,
-#     'prev_user_id': 'user_id_1',
-#     'user_id': 'user_id_2',
-#     'change': {
-#       'value': {
-#         'prev': 'initial',
-#         'this': 'changed'
-#       }
-#     }
-#   },
-]
-```
+.. code-block:: python
+    item.va_diff_all(session)
+    # [
+    #   {
+    #     'va_prev_version': 0,
+    #     'va_version': 1,
+    #     'prev_user_id': None,
+    #     'user_id': 'user_id_1',
+    #     'change': {
+    #       'value': {
+    #         'prev': None,
+    #         'this': 'initial'
+    #       }
+    #     }
+    #   },
+    #   {
+    #     'va_prev_version': 1,
+    #     'va_version': 2,
+    #     'prev_user_id': 'user_id_1',
+    #     'user_id': 'user_id_2',
+    #     'change': {
+    #       'value': {
+    #         'prev': 'initial',
+    #         'this': 'changed'
+    #       }
+    #     }
+    #   },
+    # ]
+
 
 
 You can restore some previous version using `va_restore`:
 
-```
-item.va_restore(session, 123)
+.. code-block:: python
+    item.va_restore(session, 123)
+    item = session.query(UserTable).get(item.id)
+    print(item.value)  # initial
 
-item = session.query(UserTable).get(item.id)
-print(item.value)  # initial
-```
 
 Latency
 -------
