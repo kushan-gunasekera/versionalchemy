@@ -138,7 +138,6 @@ To check difference betweeen current and previous versions use `va_diff`:
 
 ```
 item.va_diff(session, 124)
-
 # {
 #   'va_prev_version': 1,
 #   'va_version': 2,
@@ -156,6 +155,7 @@ item.va_diff(session, 124)
 `va_diff_all` will show you diffs between all versions:
 
 
+```
 # [
 #   {
 #     'va_prev_version': 0,
