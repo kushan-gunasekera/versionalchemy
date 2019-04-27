@@ -67,244 +67,132 @@ Sample Usage
 Model methods
 ----------------
 
-Assumed model:
+Assume we create a new model:
 
-+------------+---------------+---------------+---------------+
-| column     | row example 1 | row example 2 | row example 3 |
-+------------+---------------+---------------+---------------+
-| user_id    | 1             | 2             | 2             |
-+------------+---------------+---------------+---------------+
-| va_id      | 1             | 2             | 3             |
-+------------+---------------+---------------+---------------+
-| va_version | 0             | 1             | 2             |
-+------------+---------------+---------------+---------------+
-| id(pk)     | 1             | 1             | 1             |
-+------------+---------------+---------------+---------------+
-| column1    | sunshine      | sunshine      | sunshine      |
-+------------+---------------+---------------+---------------+
-| column2    | foo           | bar           | bar           |
-+------------+---------------+---------------+---------------+
-| column3    | NULL          | ball          | game          |
-+------------+---------------+---------------+---------------+
-| column4    | old           | --            | --            |
-+------------+---------------+---------------+---------------+
-| column5    | --            | new_field     | new_field     |
-+------------+---------------+---------------+---------------+
+```
+item = Example(value='initial') 
+item._updated_by = 'user_id_1'  # you can use integer user identifier here from your authorized user model, for versionalchemey it is just a tag
+session.add(item)
+session.commit()  
+```
 
-va_list(session)
-~~~~~~~~~~~~~~~~
-Return all VA version id's of this record with there corresponding user_id.
+This will add first version in `example_archive` table and sets `va_id` on instance, e.g.
 
-Call: *model.va_list(session)*
+```
+item = session.query(UserTable).get(item.id)
+print(item.va_id)  # 123
+```
 
-Proposed return object:
+Now we can use `va_list` to show all versions:
 
-.. code-block:: python
+```
+print(item.va_list(session))
+# [
+#		{'va_id': 123, 'user_id': 'user_id_1'},        
+# ]
+```
 
-	[
-		{'va_id': 1, 'user_id': 1},
-		{'va_id': 2, 'user_id': 2},
-		{'va_id': 3, 'user_id': 2}
-	]
+Let's change value:
 
-va_get(session, va_id)
-~~~~~~~~~~~~~~~~~~~~~~
-Return (historic) object.
+```
+item.val = 'changed'
+item._updated_by = 'user_id_2'
+session.commit()
+print(item.va_list(session))
+# [
+#		{'va_id': 123, 'user_id': 'user_id_1'}, 
+#       {'va_id': 124, 'user_id': 'user_id_2'},     
+# ]
+```
 
-Call: *model.va_get(session, 2)*
+You can get specific version of model using `va_get`:
 
-Proposed return object:
+```
+item.va_get(session, 123)
+# {
+#  'va_id': 123, 
+#  'id': 1, 
+#  'value': 'initial'    
+# }
+```
 
-.. code-block:: python
+You can also get all revisions:
 
-    {
-        'va_id': 2,
-        'id': 1,
-        'column1': 'sunshine',
-        'column2': 'bar',
-        'column3': 'ball',
-        'column5': 'new_field'
-    }
+```
+item.va_get_all(session)
+# [
+#   {
+#     'va_id': 123, 
+#     'id': 1, 
+#     'value': 'initial'    
+#   },
+#   {
+#     'va_id': 124, 
+#     'id': 1, 
+#     'value': 'changed'    
+#   }
+# ]
+```
 
-va_restore(session, va_id)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Restore historic object.
+To check difference betweeen current and previous versions use `va_diff`:
 
-Call: *model.va_restore(session, 23)*
+```
+item.va_diff(session, 124)
 
+# {
+#   'va_prev_version': 1,
+#   'va_version': 2,
+#   'prev_user_id': 'user_id_1',
+#   'user_id': 'user_id_2',
+#   'change': {
+#     'value': {
+#       'prev': 'initial',
+#       'this': 'changed'
+#     }
+#   }
+# }
+```
 
-- A restore is an UPDATE statement (ORM save) thus no DELETION / INSERT
-- A restrore is logged as new change in the table.
-- Log a warning when you restore a record with more or less columns then the current table schema.
-- When a historic record's column is missing, set this field to NULL.
-- !If column was  not included in older version, then it should be nullable. 'Restore' will set new value to null.
-- Raises exception if fails.Return (historic) object.
-
-
-va_diff(session, va_id)
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Compare `va_id` with previous value.
-
-Call: *model.va_diff(session, 2)*
-
-Show difference between two sequential id's:
-
-Proposed return object:
-
-.. code-block:: python
-
-    {
-        'va_prev_version': 0,
-        'va_version': 1,
-        'prev_user_id': 1,
-        'user_id': 2,
-        'change': {
-            'column2': {
-                'prev': 'foo',
-                'this': 'bar'
-            },
-            'column3': {
-                'prev': None,
-                'this': 'ball'
-            },
-            'column4': {
-                'prev': 'old',
-                'this': None
-            },
-            'column5': {
-                'prev': None,
-                'this': 'new_field'
-            }
-        }
-    }
-
-va_diff_all(session, `**kwargs`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-`**kwargs` is set of record's attributes for record identification.
-
-Returns differences between all version of a certain record.
-
-Call: *model.va_diff_all(session, id = 1)*
-
-Proposed return object:
-
-.. code-block:: python
-
-    {
-    	[
-    		'va_prev_version': None,
-    		'va_version': 0,
-    		'prev_user_id': None,
-    		'user_id': 2,
-    		'change': {
-    			'id': {
-    				'prev': None,
-    				'this': 1
-    			},
-    			'column1': {
-    				'prev': None,
-    				'this': 'sunshine'
-    			},
-    			'column2': {
-    				'prev': None,
-    				'this': 'foo'
-    			},
-    			'column4': {
-    				'prev': None,
-    				'this': 'old'
-    			}
-    		}
-    	],
-    	[
-    		'va_prev_version': 0,
-    		'va_version': 1,
-    		'prev_user_id':1,
-    		'user_id': 2,
-    		'change': {
-    			'column2': {
-    				'prev': 'foo',
-    				'this': 'bar'
-    			},
-    			'column3': {
-    				'prev': None,
-    				'this': 'ball'
-    			},
-    			'column4': {
-    				'prev': 'old',
-    				'this': None
-    			},
-    			'column5': {
-    				'prev': None,
-    				'this': 'new_field'
-    			}
-    		}
-    	],
-    	[
-    		'va_prev_version': 1,
-    		'va_version': 2,
-    		'prev_user_id':2,
-    		'user_id': 2,
-    		'change': {
-    			'column3': {
-    				'prev': 'ball',
-    				'this': 'game'
-    			}
-    		}
-    	],
-    }
+`va_diff_all` will show you diffs between all versions:
 
 
+# [
+#   {
+#     'va_prev_version': 0,
+#     'va_version': 1,
+#     'prev_user_id': None,
+#     'user_id': 'user_id_1',
+#     'change': {
+#       'value': {
+#         'prev': None,
+#         'this': 'initial'
+#       }
+#     }
+#   },
+#   {
+#     'va_prev_version': 1,
+#     'va_version': 2,
+#     'prev_user_id': 'user_id_1',
+#     'user_id': 'user_id_2',
+#     'change': {
+#       'value': {
+#         'prev': 'initial',
+#         'this': 'changed'
+#       }
+#     }
+#   },
+]
+```
 
-va_get_all(session)
-~~~~~~~~~~~~~~~~~~~
-Returns all version of a certain record.
 
-Call: *model.va_get_all(session)*
+You can restore some previous version using `va_restore`:
 
-Proposed return object:
+```
+item.va_restore(session, 123)
 
-.. code-block:: python
-
-    {
-    	[
-    		'va_version': 0,
-    		'va_id': 1,
-    		'user_id': 1,
-    		'record': {
-    			'id': 1,
-    			'column1': 'sunshine',
-    			'column2': 'foo',
-    			'column3': None,
-    			'column4': 'old'
-    		}
-    	],
-    	[
-    		'va_version': 1,
-    		'va_id': 2,
-    		'user_id': 2,
-    		'record': {
-    			'id': 1,
-    			'column1': 'sunshine',
-    			'column2': 'bar',
-    			'column3': 'ball',
-    			'column5': 'new_field'
-    		}
-    	],
-    	[
-    		'va_version': 2,
-    		'va_id': 3,
-    		'user_id': 2,
-    		'record': {
-    			'id': 1,
-    			'column1': 'sunshine',
-    			'column2': 'bar',
-    			'column3': 'game',
-    			'column5': 'new_field'
-    		}
-    	]
-    }
-
+item = session.query(UserTable).get(item.id)
+print(item.value)  # initial
+```
 
 Latency
 -------
