@@ -77,7 +77,7 @@ Assume we create a new model:
     session.commit()  
 
 
-This will add first version in `example_archive` table and sets `va_id` on instance, e.g.
+This will add first version in **example_archive** table and sets **va_id** on instance, e.g.
 
 .. code-block:: python
 
@@ -85,7 +85,7 @@ This will add first version in `example_archive` table and sets `va_id` on insta
     print(item.va_id)  # 123
 
 
-Now we can use `va_list` to show all versions:
+Now we can use **va_list** to show all versions:
 
 .. code-block:: python
 
@@ -108,7 +108,7 @@ Let's change value:
     #       {'va_id': 124, 'user_id': 'user_id_2'},     
     # ]
 
-You can get specific version of model using `va_get`:
+You can get specific version of model using **va_get**:
 
 .. code-block:: python
 
@@ -139,7 +139,7 @@ You can also get all revisions:
     # ]
 
 
-To check difference betweeen current and previous versions use `va_diff`:
+To check difference betweeen current and previous versions use **va_diff**:
 
 .. code-block:: python
 
@@ -158,7 +158,7 @@ To check difference betweeen current and previous versions use `va_diff`:
     # }
 
 
-`va_diff_all` will show you diffs between all versions:
+**va_diff_all** will show you diffs between all versions:
 
 
 .. code-block:: python
@@ -193,7 +193,7 @@ To check difference betweeen current and previous versions use `va_diff`:
 
 
 
-You can restore some previous version using `va_restore`:
+You can restore some previous version using **va_restore**:
 
 .. code-block:: python
 
