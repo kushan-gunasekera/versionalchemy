@@ -98,7 +98,7 @@ Now we can use **va_list** to show all versions:
 
     print(item.va_list(session))
     # [
-    #		{'va_id': 123, 'user_id': 'user_id_1'},        
+    #		{'va_id': 123, 'user_id': 'user_id_1', va_version: 0},
     # ]
 
 
@@ -111,20 +111,28 @@ Let's change value:
     session.commit()
     print(item.va_list(session))
     # [
-    #       {'va_id': 123, 'user_id': 'user_id_1'}, 
-    #       {'va_id': 124, 'user_id': 'user_id_2'},     
+    #       {'va_id': 123, 'user_id': 'user_id_1', 'va_version': 0},
+    #       {'va_id': 124, 'user_id': 'user_id_2', 'va_version': 1},
     # ]
 
 You can get specific version of model using **va_get**:
 
 .. code-block:: python
 
-    item.va_get(session, 123)
+    item.va_get(session, va_id=123)
     # {
     #  'va_id': 123, 
     #  'id': 1, 
     #  'value': 'initial'    
     # }
+
+You can pass `va_version` instead of `va_id`:
+
+.. code-block:: python
+
+    item.va_get(session, va_version=0)
+    item.va_get(session, 0) # or even
+    # both return same as code snippet above
 
 
 You can also get all revisions:
@@ -135,13 +143,21 @@ You can also get all revisions:
     # [
     #   {
     #     'va_id': 123, 
-    #     'id': 1, 
-    #     'value': 'initial'    
+    #     'id': 1,
+    #     'record': {
+    #       'value': 'initial'
+    #     },
+    #     'user_id': 'user_id_1',
+    #     'va_version': 0
     #   },
     #   {
     #     'va_id': 124, 
-    #     'id': 1, 
-    #     'value': 'changed'    
+    #     'id': 1,
+    #     'record': {
+    #       'value': 'changed'
+    #     },
+    #     'user_id': 'user_id_2',
+    #     'va_version': 1
     #   }
     # ]
 
@@ -150,7 +166,7 @@ To check difference betweeen current and previous versions use **va_diff**:
 
 .. code-block:: python
 
-    item.va_diff(session, 124)
+    item.va_diff(session, va_id=124) # or item.va_diff(session, va_version=0)
     # {
     #   'va_prev_version': 1,
     #   'va_version': 2,
@@ -204,7 +220,7 @@ You can restore some previous version using **va_restore**:
 
 .. code-block:: python
 
-    item.va_restore(session, 123)
+    item.va_restore(session, va_id=123)  # or item.va_restore(session, va_version=0)
     item = session.query(Example).get(item.id)
     print(item.value)  # initial
 

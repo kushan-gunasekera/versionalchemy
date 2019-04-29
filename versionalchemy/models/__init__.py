@@ -218,7 +218,7 @@ class VAModelMixin(object):
         This can be called after a row has been inserted into the table and the session has been flushed.
         """
         return utils.result_to_dict(session.execute(
-            sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id])
+            sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id, cls.ArchiveTable.va_version])
             .where(cls.create_log_select_expression(kwargs))
         ))
 
@@ -238,35 +238,58 @@ class VAModelMixin(object):
         return self.va_list_by_pk(session, **self.get_row_identifier())
 
     @classmethod
-    def va_get(cls, session, va_id):
+    def va_get(cls, session, va_version=None, va_id=None):
         """
-        Returns historic object (log record).
+        Returns historic object (log record). Provide one of va_version, va_id to identify version
         This can be called after a row has been inserted into the table and the session has been flushed.
         :param session: flushed session
-        :param va_id: version id of requested  record
+        :param va_version - va_version of log row (va_version field in va_version)
+        :param va_id: va_id of requested record (va_id field). Can be used as alternative to va_version
         :return: a dictionary of key value pairs representing version id, id of the record in model,
          and versioned model's data
         :rtype: dict
         """
+        if va_version is not None and va_id is not None:
+            log.warning("both va_version and va_id provided, only va_version will be used, please exclude one of them "
+                        "from call")
+
+        if va_version is None and va_id is None:
+            raise LogIdentifyError("Please provide at least one from va_version, va_id to identify column")
+
+        if va_version is not None:
+            filter_condition = (cls.ArchiveTable.va_version == va_version,)
+        else:
+            filter_condition = (cls.ArchiveTable.va_id == va_id,)
+
         result = utils.result_to_dict(session.execute(
                 sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
-                .where(cls.ArchiveTable.va_id == va_id)
-        ))[0]
+                .where(*filter_condition)
+        ))
+
+        if not len(result):
+            if va_version is not None:
+                identify_str = 'va_version={}'.format(va_version)
+            else:
+                identify_str = 'va_id={}'.format(va_id)
+            raise HistoryItemNotFound("Can't find log record by {}".format(identify_str))
+
+        result = result[0]
         historic_object = result['va_data']
         historic_object['va_id'] = result['va_id']
         return historic_object
 
     @classmethod
-    def va_restore(cls, session, va_id):
+    def va_restore(cls, session, va_version=None, va_id=None):
         """
-        Restores historic object.
+        Restores historic object. Provide one of va_version, va_id to identify version
         If column was  not included in older version, then it should be nullable. \
-        This method will set new value to null. Othervise, it rases exception.
+        This method will set new value to null. Otherwise, it rases exception.
         :param session: flushed session
-        :param va_id: version id of  record to be restored
+        :param va_version - va_version of log row to restore (va_version field in va_version)
+        :param va_id: va_id of record to restore (va_id field). Can be used as alternative to va_version
         :return: None
         """
-        vals = cls.va_get(session, va_id)
+        vals = cls.va_get(session, va_version, va_id)
         row = session.query(cls).get(vals['id'])
         values = {}
         for col_name, model_column in cls.__dict__.items():
@@ -293,29 +316,47 @@ class VAModelMixin(object):
         session.commit()
 
     @classmethod
-    def va_diff(cls, session, va_id):
+    def va_diff(cls, session, va_version=None, va_id=None):
         """
-        Compares version with passed 'va_id' with previous version.
+        Compares version identified by 'va_version' or 'va_id' with previous version.
+        Provide one of va_version, va_id
         :param session: flushed session
         :param va_id: version id of log row to be compared
         :return: dict with versions, user_id's and dict with columns as keys and changes as values
         :return: dict
         """
+        if va_version is not None and va_id is not None:
+            log.warning("both va_version and va_id provided, only va_version will be used, please exclude one of them "
+                        "from call")
+
+        if va_version is None and va_id is None:
+            raise LogIdentifyError("Please provide at least one from va_version, va_id to identify column")
+
+        if va_version is not None:
+            filter_condition = (cls.ArchiveTable.va_version == va_version,)
+        else:
+            filter_condition = (cls.ArchiveTable.va_id == va_id,)
+
         this_row = utils.result_to_dict(session.execute(
-            sa.select({cls.ArchiveTable}).where(cls.ArchiveTable.va_id == va_id)
+            sa.select({cls.ArchiveTable}).where(*filter_condition)
         ))
         if not len(this_row):
-            raise HistoryItemNotFound('HistoryItem with id {} does not exist'.format(va_id))
+            if va_version is not None:
+                identify_str = 'va_version={}'.format(va_version)
+            else:
+                identify_str = 'va_id={}'.format(va_id)
+            raise HistoryItemNotFound("Can't find log record by {}".format(identify_str))
         this_row = this_row[0]
+
+        va_id = this_row['va_id']
         all_history_items = {
            col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
         }
         prev_log = [
             log for log in cls.va_list_by_pk(session, **all_history_items) if log['va_id'] < va_id
-            ]
+        ]
         if not prev_log:
             return utils.compare_rows(None, this_row)
-
 
         prev_va_id = prev_log[-1]['va_id']
         prev_row = utils.result_to_dict(session.execute(

@@ -37,7 +37,6 @@ def compare_rows(old_r, new_r):
         old_r = {}
         for key in new_r.keys():
             old_r[key] = None
-    print("OLD ROW",old_r)
     return {
         'va_prev_version': old_r['va_version'],
         'va_version': new_r['va_version'],
