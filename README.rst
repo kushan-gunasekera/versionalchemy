@@ -38,12 +38,14 @@ Sample Usage
     from sqlalchemy import create_engine
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.schema import UniqueConstraint
-    
+    from sqlalchemy.orm import Session
+
     import versionalchemy as va
     from versionalchemy.models import VAModelMixin, VALogMixin
 
     MY_SQL_URL = '<insert mysql url here>'
     engine = create_engine(MY_SQL_URL)
+    session = Session(bind=engine)
     Base = declarative_base(bind=engine)
 
     class Example(Base, VAModelMixin):
@@ -60,7 +62,10 @@ Sample Usage
         )
         id = sa.Column(sa.Integer)
         user_id = sa.Column(sa.Integer)
-    
+
+    Base.metadata.create_all(engine) # if you need create database tables from models.
+    # Otherwise you could use e.g. Alembic for migrating database, or create models manually
+
     va.init()  # Only call this once
     Example.register(ExampleArchive, engine)  # Call this once per engine, AFTER va.init
 
@@ -81,7 +86,7 @@ This will add first version in **example_archive** table and sets **va_id** on i
 
 .. code-block:: python
 
-    item = session.query(UserTable).get(item.id)
+    item = session.query(Example).get(item.id)
     print(item.va_id)  # 123
 
 
@@ -198,7 +203,7 @@ You can restore some previous version using **va_restore**:
 .. code-block:: python
 
     item.va_restore(session, 123)
-    item = session.query(UserTable).get(item.id)
+    item = session.query(Example).get(item.id)
     print(item.value)  # initial
 
 
