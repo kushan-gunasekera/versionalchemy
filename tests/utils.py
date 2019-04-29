@@ -125,13 +125,19 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         print('setup')
 
         if hasattr(UserTable, 'test_column1'):
-            delattr(UserTable, 'test_column1')
+            try:
+                delattr(UserTable, 'test_column1')
+            except:
+                pass
             sa.inspect(UserTable).mapper._expire_memoizations()
             del sa.inspect(UserTable).mapper.columns['test_column1']
             del sa.inspect(UserTable).mapper._props['test_column1']
 
         if hasattr(UserTable, 'test_column3'):
-            delattr(UserTable, 'test_column3')
+            try:
+                delattr(UserTable, 'test_column3')
+            except:
+                pass
             sa.inspect(UserTable).mapper._expire_memoizations()
             del sa.inspect(UserTable).mapper.columns['test_column3']
             del sa.inspect(UserTable).mapper._props['test_column3']

@@ -7,6 +7,8 @@ row changes to relational SQL tables.
 Authors: `Ryan Kirkman <https://www.github.com/ryankirkman/>`_ and
 `Akshay Nanavati <https://www.github.com/akshaynanavati/>`_
 
+Tested on Python 3.7 and python 2.7 with SQLAlchemey v1.3.3
+
 Build Status
 ------------
 .. image:: https://travis-ci.org/NerdWalletOSS/versionalchemy.svg?branch=master
