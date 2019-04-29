@@ -1,7 +1,8 @@
 import unittest
+from copy import deepcopy
 
 import sqlalchemy as sa
-from sqlalchemy import func
+from sqlalchemy import func, String
 from sqlalchemy.orm import sessionmaker
 
 from tests.models import (
@@ -11,6 +12,7 @@ from tests.models import (
     MultiColumnUserTable,
     UserTable,
 )
+import tests
 import versionalchemy as va
 from versionalchemy import utils
 
@@ -19,7 +21,7 @@ class VaTestHelpers(object):
     def _add_and_test_version(self, row, version):
         self.session.add(row)
         self.session.commit()
-        self.assertEquals(row.version(self.session), version)
+        self.assertEqual(row.version(self.session), version)
 
     def _result_to_dict(self, res):
         return utils.result_to_dict(res)
@@ -120,18 +122,69 @@ class SQLiteTestBase(unittest.TestCase, VaTestHelpers):
         super(SQLiteTestBase, self).__init__(methodName=methodName)
 
     def setUp(self):
+        print('setup')
+
+        if hasattr(UserTable, 'test_column1'):
+            try:
+                delattr(UserTable, 'test_column1')
+            except:
+                pass
+            sa.inspect(UserTable).mapper._expire_memoizations()
+            del sa.inspect(UserTable).mapper.columns['test_column1']
+            del sa.inspect(UserTable).mapper._props['test_column1']
+
+        if hasattr(UserTable, 'test_column3'):
+            try:
+                delattr(UserTable, 'test_column3')
+            except:
+                pass
+            sa.inspect(UserTable).mapper._expire_memoizations()
+            del sa.inspect(UserTable).mapper.columns['test_column3']
+            del sa.inspect(UserTable).mapper._props['test_column3']
+
+        try:
+            delete_cmd = 'drop table {}'
+            self.engine.execute(delete_cmd.format(UserTable.__tablename__))
+        except Exception as e:
+            pass
+
         Base.metadata.create_all(self.engine)
         UserTable.register(ArchiveTable, self.engine)
         MultiColumnUserTable.register(MultiColumnArchiveTable, self.engine)
         self.p1 = dict(product_id=10, col1='foobar', col2=10, col3=1)
         self.p2 = dict(product_id=11, col1='baz', col2=11, col3=1)
         self.p3 = dict(product_id=2546, col1='test', col2=12, col3=0)
+
         self.session = self.Session()
 
     def tearDown(self):
+        self.dropAll()
+        self.session.close()
+
+    def dropAll(self):
         delete_cmd = 'drop table {}'
         self.engine.execute(delete_cmd.format(UserTable.__tablename__))
         self.engine.execute(delete_cmd.format(ArchiveTable.__tablename__))
         self.engine.execute(delete_cmd.format(MultiColumnUserTable.__tablename__))
         self.engine.execute(delete_cmd.format(MultiColumnArchiveTable.__tablename__))
-        self.session.close()
+
+    def addTestNullableColumn(self):
+        setattr(UserTable, 'test_column1', sa.Column(String(50), nullable=True))
+        try:
+            self.engine.execute('alter table {} add column test_column1 VARCHAR(50) NULL;'.format(
+                UserTable.__tablename__))
+        except:
+            pass
+
+    def deleteTestNullableColumn(self):
+        UserTable.__mapper__._dispose_called = True
+        delattr(UserTable, 'test_column1')
+        sa.inspect(UserTable).mapper._expire_memoizations()
+        del sa.inspect(UserTable).mapper.columns['test_column1']
+        del sa.inspect(UserTable).mapper._props['test_column1']
+        UserTable.__mapper__._dispose_called = False
+
+    def addTestNoDefaultNoNullColumn(self):
+        setattr(UserTable, 'test_column3', sa.Column(String(50), nullable=False))
+        self.engine.execute('alter table {} add column test_column3 VARCHAR(50) NOT NULL DEFAULT "";'.format(
+            UserTable.__tablename__))

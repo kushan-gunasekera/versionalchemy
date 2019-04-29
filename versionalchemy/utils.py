@@ -9,6 +9,41 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine.reflection import Inspector
 
+def compare_dicts(old_d, new_d):
+    if not old_d:
+        old_d = {}
+        for key in new_d.keys():
+            old_d[key]=None
+
+    changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
+    changes = {}
+    for pair in list(changed_values_set):
+        if pair[0] not in changes:
+            changes[pair[0]] = {}
+        if pair[0] in new_d:
+            if pair[0] in old_d:
+                prev_or_this = 'this' if pair in new_d.items() else "prev"
+                changes[pair[0]][prev_or_this] = pair[1]
+            else:
+                changes[pair[0]]['prev'] = None
+                changes[pair[0]]['this'] = pair[1]
+        elif pair[0] in old_d:
+            changes[pair[0]]['prev'] = pair[1]
+            changes[pair[0]]['this'] = None
+    return changes
+
+def compare_rows(old_r, new_r):
+    if not old_r:
+        old_r = {}
+        for key in new_r.keys():
+            old_r[key] = None
+    return {
+        'va_prev_version': old_r['va_version'],
+        'va_version': new_r['va_version'],
+        'prev_user_id': old_r['user_id'],
+        'user_id': new_r['user_id'],
+        'change': compare_dicts(old_r['va_data'], new_r['va_data'])
+    }
 
 def result_to_dict(res):
     """
@@ -87,14 +122,16 @@ def get_column_attribute(row, col_name, use_dirty=True, dialect=None):
     changed; else this will return getattr(row, col_name)
     """
     bind_processor = get_bind_processor(row, col_name, dialect)
-    hist = getattr(sa.inspect(row).attrs, col_name).history
+    inspect_attr = getattr(sa.inspect(row).attrs, col_name, None)
+    hist = inspect_attr.history if inspect_attr else None
     getattr(row, col_name)
-    if not use_dirty and hist.has_changes():
+    if not use_dirty and hist and hist.has_changes():
         if hist.deleted:
             return bind_processor(hist.deleted[0])
         else:
             return None
-    return bind_processor(getattr(row, col_name))
+    attr = getattr(row, col_name) if not type(getattr(row, col_name)) is tuple else (getattr(row, col_name)[0])
+    return bind_processor(attr)
 
 
 def get_column_keys(table):
@@ -181,7 +218,7 @@ class _JSONEncoded(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
-        elif isinstance(value, basestring):
+        elif isinstance(value, str):
             value = json.loads(value)
 
         if self.json_type is not None and not isinstance(value, self.json_type):

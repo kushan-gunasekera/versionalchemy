@@ -19,6 +19,7 @@ def delete(va_table, session, conds):
     '''
     with session.begin_nested():
         archive_conds_list = _get_conditions_list(va_table, conds)
+        print("WHERECLAUSE", _get_conditions(archive_conds_list))
         session.execute(
             sa.delete(va_table.ArchiveTable, whereclause=_get_conditions(archive_conds_list))
         )
@@ -98,7 +99,6 @@ def get(
         va_table, session, conds, t1, t2, include_deleted, limit, offset
     )
     return _format_response(rows, fields, version_col_names)
-
 
 def _format_response(rows, fields, unique_col_names):
     '''
@@ -187,7 +187,7 @@ def _get_conditions_list(va_table, conds, archive=True):
         conditions = []
         t = va_table.ArchiveTable if archive else va_table
 
-        for col_name, value in cond.iteritems():
+        for col_name, value in cond.items():
             if col_name not in va_table.va_version_columns:
                 raise ValueError('{} is not one of the unique columns <{}>'.format(
                     col_name, ','.join(va_table.va_version_columns)
