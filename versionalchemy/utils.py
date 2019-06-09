@@ -202,6 +202,8 @@ class VAJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
+        if isinstance(obj, datetime.date):
+            return obj.isoformat()
         return super(VAJSONEncoder, self).default(obj)
 
 
