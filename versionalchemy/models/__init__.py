@@ -300,15 +300,16 @@ class VAModelMixin(object):
                 if values[col_name] is not None and getattr(cls, col_name).type.python_type is datetime:
                     values[col_name] = arrow.get(vals[col_name]).datetime
             else:
-                if model_column.nullable:
-                    values[col_name] = None
-                    log.warning("Model '{}' has new column '{}' which has no default, using NULL".format(
-                        cls.__name__, col_name))
-                else:
-                    raise RestoreError(
-                        ("We does not support non-nullable values that were added in new version of model"
-                         "'{}'. New column is '{}', please mark it as nullable to be able to restore").format(
+                if getattr(model_column, 'nullable', None) is not None:
+                    if model_column.nullable:
+                        values[col_name] = None
+                        log.warning("Model '{}' has new column '{}' which has no default, using NULL".format(
                             cls.__name__, col_name))
+                    else:
+                        raise RestoreError(
+                            ("We does not support non-nullable values that were added in new version of model"
+                             "'{}'. New column is '{}', please mark it as nullable to be able to restore").format(
+                                cls.__name__, col_name))
 
         for col_name, col_value in values.items():
             setattr(row, col_name, col_value)
