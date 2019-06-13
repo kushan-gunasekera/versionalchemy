@@ -310,9 +310,11 @@ class VAModelMixin(object):
                             ("We does not support non-nullable values that were added in new version of model"
                              "'{}'. New column is '{}', please mark it as nullable to be able to restore").format(
                                 cls.__name__, col_name))
-
-        for col_name, col_value in values.items():
-            setattr(row, col_name, col_value)
+        if row is None:
+            session.execute(sa.insert(cls).values(values))
+        else:
+            for col_name, col_value in values.items():
+                setattr(row, col_name, col_value)
         session.flush()
         session.commit()
 
