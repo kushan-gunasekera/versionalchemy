@@ -1,7 +1,7 @@
 from setuptools import setup
 
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 DOWNLOAD_URL = 'https://github.com/NerdWalletOSS/versionalchemy/tarball/v{}'.format(VERSION)
 with open('README.rst') as f:
     LONG_DESCRIPTION = f.read()
