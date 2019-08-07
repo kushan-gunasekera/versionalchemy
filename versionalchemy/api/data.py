@@ -76,10 +76,10 @@ def get(
     if va_id is not None:
         return _format_response(utils.result_to_dict(session.execute(
             sa.select([va_table.ArchiveTable])
-            .where(va_table.ArchiveTable.va_id > va_id)
-            .order_by(*_get_order_clause(va_table.ArchiveTable))
-            .limit(page_size)
-            .offset(offset)
+                .where(va_table.ArchiveTable.va_id > va_id)
+                .order_by(*_get_order_clause(va_table.ArchiveTable))
+                .limit(page_size)
+                .offset(offset)
         )), fields, version_col_names)
 
     if t1 is None and t2 is None:
@@ -99,6 +99,7 @@ def get(
         va_table, session, conds, t1, t2, include_deleted, limit, offset
     )
     return _format_response(rows, fields, version_col_names)
+
 
 def _format_response(rows, fields, unique_col_names):
     '''
@@ -207,10 +208,10 @@ def _get_historical_changes(va_table, session, conds, t1, t2, include_deleted, l
 
     return utils.result_to_dict(session.execute(
         sa.select([va_table.ArchiveTable])
-        .where(and_clause)
-        .order_by(*_get_order_clause(va_table.ArchiveTable))
-        .limit(limit)
-        .offset(offset)
+            .where(and_clause)
+            .order_by(*_get_order_clause(va_table.ArchiveTable))
+            .limit(limit)
+            .offset(offset)
     ))
 
 
@@ -226,7 +227,7 @@ def _get_historical_time_slice(va_table, session, t, conds, include_deleted, lim
     t2 = at.__table__.alias('t2')
     return utils.result_to_dict(session.execute(
         sa.select([at])
-        .select_from(at.__table__.join(
+            .select_from(at.__table__.join(
             t2,
             sa.and_(
                 t2.c.va_updated_at <= t,
@@ -235,10 +236,10 @@ def _get_historical_time_slice(va_table, session, t, conds, include_deleted, lim
             ),
             isouter=True,
         ))
-        .where(t2.c.va_version.is_(None) & and_clause)
-        .order_by(*_get_order_clause(at))
-        .limit(limit)
-        .offset(offset)
+            .where(t2.c.va_version.is_(None) & and_clause)
+            .order_by(*_get_order_clause(at))
+            .limit(limit)
+            .offset(offset)
     ))
 
 
@@ -254,10 +255,10 @@ def _get_latest_time_slice(va_table, session, conds, include_deleted, limit, off
                 va_table.ArchiveTable.va_id == va_table.va_id
             )
         )
-        .where(and_clause)
-        .order_by(*_get_order_clause(va_table.ArchiveTable))
-        .limit(limit)
-        .offset(offset)
+            .where(and_clause)
+            .order_by(*_get_order_clause(va_table.ArchiveTable))
+            .limit(limit)
+            .offset(offset)
     )
     return utils.result_to_dict(result)
 

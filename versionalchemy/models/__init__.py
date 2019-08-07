@@ -1,15 +1,15 @@
 import logging
 from datetime import datetime
-import json
 from operator import and_
 
-from sqlalchemy import Column, Integer, Boolean, DateTime, func
+import arrow
 import sqlalchemy as sa
+from sqlalchemy import Column, Integer, Boolean, DateTime, func
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 from versionalchemy import utils
 from versionalchemy.exceptions import LogTableCreationError, RestoreError, LogIdentifyError, HistoryItemNotFound
-import arrow
+
 log = logging.getLogger(__name__)
 
 
@@ -67,7 +67,7 @@ class VALogMixin(object):
             utils.generate_and_clause(cls, row, cls._version_col_names, use_dirty=use_dirty)
         result = session.execute(
             sa.select([func.max(cls.va_version)]).
-            where(and_clause)
+                where(and_clause)
         ).first()
         return None if result is None else result[0]
 
@@ -192,7 +192,7 @@ class VAModelMixin(object):
         """
         result = session.execute(
             sa.select([self.ArchiveTable.va_version]).
-            where(self.ArchiveTable.va_id == self.va_id)
+                where(self.ArchiveTable.va_id == self.va_id)
         ).first()
         return result[0]
 
@@ -219,7 +219,7 @@ class VAModelMixin(object):
         """
         return utils.result_to_dict(session.execute(
             sa.select([cls.ArchiveTable.va_id, cls.ArchiveTable.user_id, cls.ArchiveTable.va_version])
-            .where(cls.create_log_select_expression(kwargs))
+                .where(cls.create_log_select_expression(kwargs))
         ))
 
     def get_row_identifier(self):
@@ -262,7 +262,7 @@ class VAModelMixin(object):
             filter_condition = (cls.ArchiveTable.va_id == va_id,)
 
         result = utils.result_to_dict(session.execute(
-                sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
+            sa.select({cls.ArchiveTable.va_id, cls.ArchiveTable.va_data})
                 .where(*filter_condition)
         ))
 
@@ -353,7 +353,7 @@ class VAModelMixin(object):
 
         va_id = this_row['va_id']
         all_history_items = {
-           col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
+            col_name: this_row[col_name] for col_name in cls.ArchiveTable._version_col_names
         }
         prev_log = [
             log for log in cls.va_list_by_pk(session, **all_history_items) if log['va_id'] < va_id
@@ -363,7 +363,7 @@ class VAModelMixin(object):
 
         prev_va_id = prev_log[-1]['va_id']
         prev_row = utils.result_to_dict(session.execute(
-                sa.select({cls.ArchiveTable})
+            sa.select({cls.ArchiveTable})
                 .where(cls.ArchiveTable.va_id == prev_va_id)
         ))[0]
 
@@ -383,7 +383,7 @@ class VAModelMixin(object):
             if i is 0:
                 all_changes.append(utils.compare_rows(None, all_history_items[i]))
             else:
-                all_changes.append(utils.compare_rows(all_history_items[i-1], all_history_items[i]))
+                all_changes.append(utils.compare_rows(all_history_items[i - 1], all_history_items[i]))
 
         return all_changes
 

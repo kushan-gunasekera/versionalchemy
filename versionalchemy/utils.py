@@ -1,7 +1,7 @@
 import datetime
 import itertools
-import simplejson as json
 
+import simplejson as json
 import sqlalchemy as sa
 from sqlalchemy import (
     TypeDecorator,
@@ -9,11 +9,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine.reflection import Inspector
 
+
 def compare_dicts(old_d, new_d):
     if not old_d:
         old_d = {}
         for key in new_d.keys():
-            old_d[key]=None
+            old_d[key] = None
 
     changed_values_set = set.symmetric_difference(set(old_d.items()), set(new_d.items()))
     changes = {}
@@ -32,6 +33,7 @@ def compare_dicts(old_d, new_d):
             changes[pair[0]]['this'] = None
     return changes
 
+
 def compare_rows(old_r, new_r):
     if not old_r:
         old_r = {}
@@ -48,6 +50,7 @@ def compare_rows(old_r, new_r):
         'new_updated_at': new_r['updated_at'],
         'change': compare_dicts(old_r['va_data'], new_r['va_data'])
     }
+
 
 def result_to_dict(res):
     """
@@ -203,6 +206,7 @@ class VAJSONEncoder(json.JSONEncoder):
     can be reloaded into a MySQL/Postgres TIMESTAMP column directly.
     (This was verified on MySQL 5.6 and Postgres 9.6)
     """
+
     def default(self, obj):
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
