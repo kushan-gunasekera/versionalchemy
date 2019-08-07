@@ -39,9 +39,13 @@ def compare_rows(old_r, new_r):
             old_r[key] = None
     return {
         'va_prev_version': old_r['va_version'],
-        'va_version': new_r['va_version'],
+        'va_new_version': new_r['va_version'],
         'prev_user_id': old_r['user_id'],
-        'user_id': new_r['user_id'],
+        'new_user_id': new_r['user_id'],
+        'prev_deleted': old_r['deleted'],
+        'new_deleted': new_r['deleted'],
+        'prev_updated_at': old_r['updated_at'],
+        'new_updated_at': new_r['updated_at'],
         'change': compare_dicts(old_r['va_data'], new_r['va_data'])
     }
 
